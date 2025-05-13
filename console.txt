@@ -1,0 +1,3 @@
+scanned cubes~0
+created new cube: c-0~0
+disconnected: c-0~0
