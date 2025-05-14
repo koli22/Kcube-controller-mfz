@@ -3,7 +3,6 @@
 import clr
 import time
 
-
 # Adding references to Thorlabs Kinesis .NET assemblies
 
 path = "C:\\Program Files\\Thorlabs\\Kinesis\\"
@@ -23,23 +22,23 @@ from System import Decimal
 from System import Math
 
 
-class Cube: 
+class Cube:
     """
     Class for managing and controlling a Thorlabs KCube motor device.
     """
 
     def __init__(self, program):
         # Initialization of Cube attributes
-        self.name = "unnamed"                  # Device name
-        self.serialNumber = "-1"               # Serial number placeholder
-        self.offset = 0                        # Mechanical offset in degrees
-        self.controller = None                 # Will hold the device controller object
-        self.invrted = False                   # Flag to indicate if motor direction is inverted
-        self.oldName = ""                      # Stores the name attached to this serial number last time
+        self.name = "unnamed"  # Device name
+        self.serialNumber = "-1"  # Serial number placeholder
+        self.offset = Decimal(0)  # Mechanical offset in degrees
+        self.controller = None  # Will hold the device controller object
+        self.invrted = False  # Flag to indicate if motor direction is inverted
+        self.oldName = ""  # Stores the name attached to this serial number last time
         self.allNames = []
         self.mainProgram = program
 
-    def addName(self,name):
+    def addName(self, name):
         if (self.allNames.count(name) == 0):
             self.allNames.append(str(name))
 
@@ -64,9 +63,9 @@ class Cube:
 
         # Load and update motor configuration
         config = self.controller.LoadMotorConfiguration(
-                self.serialNumber,
-                DeviceConfiguration.DeviceSettingsUseOptionType.UseDeviceSettings
-            )
+            self.serialNumber,
+            DeviceConfiguration.DeviceSettingsUseOptionType.UseDeviceSettings
+        )
         config.DeviceSettingsName = str('PRM1-Z8')
         config.UpdateCurrentConfiguration()
 
@@ -78,7 +77,6 @@ class Cube:
         if (self.name != newName):
             self.name = newName
 
-    
     def setSerialNumber(self, newNumber):
         # Set the serial number only once
         if (self.serialNumber == "-1"):
@@ -86,42 +84,89 @@ class Cube:
         else:
             raise ValueError("serial number already set")
 
-            
     def setOffset(self, newOffset):
+        print(newOffset)
+        offsetAngle = Decimal(newOffset) - self.controller.get_Position()
+
         # Normalize and store offset angle
-        offsetAngle = self.normalizeAngle(newOffset)
+        offsetAngle = self.normalizeAngle(offsetAngle)
         self.offset = offsetAngle
-            
+
+        print(self.offset)
 
     def normalizeAngle(self, angle):
         # Normalize angle to range 0–359
-        normalizedAngle = angle % 360
+        normalizedAngle = angle % Decimal(360)
         return normalizedAngle
-    
+
     def Home(self):
         # Home the motor and move to logical zero
         print('Homing Motor')
         self.controller.Home(60000)
         self.move_to_position(0, tolerance=0)
 
-    
+
+    # Not in use
+
+    def move_to_position2(self, target_position, velocity=10, timeout=60000, tolerance=5, max_angle=360):
+        """
+        Moves motor to a target angle in range (0, 360).
+        Applies mechanical offset and handles inversion logic.
+        """
+
+        target_position = (Decimal(target_position) + self.offset) % Decimal(max_angle)
+        tolerance = Decimal(tolerance)
+        max_angle = Decimal(max_angle)
+
+        current_position = self.controller.get_Position() % max_angle
+        print(f"Current Position: {current_position - self.offset}")
+
+        if Math.Abs(current_position - target_position) <= tolerance:
+            print(f"Motor is already within the target proximity: {current_position - self.offset}")
+            return
+
+        while True:
+            if (current_position > target_position):
+                direction = MotorDirection.Backward
+            else:
+                direction = MotorDirection.Forward
+
+
+            if (self.invrted and direction == MotorDirection.Forward):
+                direction = MotorDirection.Backward
+            elif (self.invrted and direction == MotorDirection.Backward):
+                direction = MotorDirection.Forward
+
+            ditsance = Math.Abs(current_position - target_position)
+
+            jog_params = self.controller.GetJogParams()
+            jog_params.StepSize = ditsance
+            jog_params.VelocityParams.MaxVelocity = Decimal(velocity)
+            self.controller.SetJogParams(jog_params)
+
+            self.controller.MoveJog(direction, timeout)
+            time.sleep(1)
+
+            if Math.Abs(current_position - target_position) <= tolerance:
+                print(f"Reached position: {current_position - self.offset}")
+                return
+
+
     def move_to_position(self, target_position, velocity=10, timeout=60000, tolerance=5, max_angle=360):
         """
         Moves motor to a target angle with shortest angular distance.
         Applies mechanical offset and handles inversion logic.
         """
-        target_position = target_position + self.offset
 
-
-        target_position = Decimal(target_position) % Decimal(max_angle)
+        target_position = (Decimal(target_position) + self.offset) % Decimal(max_angle)
         tolerance = Decimal(tolerance)
         max_angle = Decimal(max_angle)
 
         current_position = self.controller.get_Position() % max_angle
-        print(f"Current Position: {current_position - Decimal(self.offset)}")
+        print(f"Current Position: {current_position - self.offset}")
 
         if Math.Abs(current_position - target_position) <= tolerance:
-            print(f"Motor is already within the target proximity: {current_position - Decimal(self.offset)}")
+            print(f"Motor is already within the target proximity: {current_position - self.offset}")
             return
 
         # Compute shortest direction (clockwise or counter-clockwise)
@@ -144,9 +189,6 @@ class Cube:
         elif (self.invrted and direction == MotorDirection.Backward):
             direction = MotorDirection.Forward
 
-
-
-
         # Set jog parameters
         jog_params = self.controller.GetJogParams()
         jog_params.StepSize = dir
@@ -158,10 +200,10 @@ class Cube:
             self.controller.MoveJog(direction, timeout)
             time.sleep(1)
             current_position = self.controller.get_Position() % max_angle
-            print(f"Current Position: {current_position - Decimal(self.offset)}")
+            print(f"Current Position: {current_position - self.offset}")
 
             if Math.Abs(current_position - target_position) <= tolerance:
-                print(f"Target position reached (within tolerance): {current_position - Decimal(self.offset)}")
+                print(f"Target position reached (within tolerance): {current_position - self.offset}")
                 break
 
             # Compute shortest direction (clockwise or counter-clockwise)
@@ -187,9 +229,9 @@ class Cube:
             jog_params.StepSize = dir
             self.controller.SetJogParams(jog_params)
 
-        print(f"Motor stopped at position: {current_position - Decimal(self.offset)}")
+        print(f"Motor stopped at position: {current_position - self.offset}")
 
-    def detectIfInverted(self,max_angle = 360, velocity = 10, step = 10, timeout = 60000):
+    def detectIfInverted(self, max_angle=360, velocity=10, step=10, timeout=60000):
         """
         Moves motor forward and checks if position decreases.
         If yes, motor direction is inverted.
@@ -224,10 +266,8 @@ class Cube:
 
         self.Home()
 
-
-
     def disconnect(self):
-        if self.controller == None: # no connection
+        if self.controller == None:  # no connection
             return
 
         # Stop polling and safely disconnect device
@@ -235,3 +275,6 @@ class Cube:
         self.controller.Disconnect(False)
 
         print("disconnected " + self.serialNumber)
+
+    def getCurrentPosition(self):
+        return self.controller.get_Position()
