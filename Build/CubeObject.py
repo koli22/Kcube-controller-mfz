@@ -37,6 +37,8 @@ class Cube:
         self.oldName = ""  # Stores the name attached to this serial number last time
         self.allNames = []
         self.mainProgram = program
+        self.myType = 0
+        self.dc = DeviceConfiguration.DeviceSettingsUseOptionType.UseDeviceSettings
 
     def addName(self, name):
         if (self.allNames.count(name) == 0):
@@ -158,6 +160,7 @@ class Cube:
         Applies mechanical offset and handles inversion logic.
         """
 
+
         target_position = (Decimal(target_position) + self.offset) % Decimal(max_angle)
         tolerance = Decimal(tolerance)
         max_angle = Decimal(max_angle)
@@ -278,3 +281,7 @@ class Cube:
 
     def getCurrentPosition(self):
         return self.controller.get_Position()
+
+    def findDevice(self):
+        self.move_to_position(5, tolerance=1, velocity=30, timeout=10000)
+        self.move_to_position(0, tolerance=1, velocity=30, timeout=10000)

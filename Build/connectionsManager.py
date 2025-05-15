@@ -35,7 +35,8 @@ class connectionsManager:
 
         if not serial_numbers:
             # If no devices found, raise an error
-            raise ValueError("no cube connected")
+            #raise ValueError("no cube connected")
+            pass
 
         connected_kcubes = []
 
