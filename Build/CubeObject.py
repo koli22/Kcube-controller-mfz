@@ -87,18 +87,20 @@ class Cube:
             raise ValueError("serial number already set")
 
     def setOffset(self, newOffset):
-        print(newOffset)
-        offsetAngle = Decimal(newOffset) - self.controller.get_Position()
+        offsetAngle = self.controller.get_Position() - Decimal(newOffset)
 
         # Normalize and store offset angle
         offsetAngle = self.normalizeAngle(offsetAngle)
         self.offset = offsetAngle
 
-        print(self.offset)
+        print("new offset", self.offset)
 
     def normalizeAngle(self, angle):
         # Normalize angle to range 0–359
         normalizedAngle = angle % Decimal(360)
+        while normalizedAngle < Decimal(0):
+            normalizedAngle += Decimal(360)
+
         return normalizedAngle
 
     def Home(self):
@@ -154,7 +156,7 @@ class Cube:
                 return
 
 
-    def move_to_position(self, target_position, velocity=10, timeout=60000, tolerance=5, max_angle=360):
+    def move_to_position(self, target_position, velocity=10, timeout=60000, tolerance=0, max_angle=360):
         """
         Moves motor to a target angle with shortest angular distance.
         Applies mechanical offset and handles inversion logic.
@@ -285,3 +287,6 @@ class Cube:
     def findDevice(self):
         self.move_to_position(5, tolerance=1, velocity=30, timeout=10000)
         self.move_to_position(0, tolerance=1, velocity=30, timeout=10000)
+
+    def give_offset(self):
+        return (Decimal(360) - self.offset) % Decimal(360)

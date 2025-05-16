@@ -20,7 +20,7 @@ class MainWindow(tkinter.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.parent = parent                        # tkinter root
-        self.parent.title("Nějaký jméno co jsem ještě nevymyslel")     # naming the app
+        self.parent.title("Thorlabs Sisenik")     # naming the app
 
         ico = Image.open('cube.png')
         photo = ImageTk.PhotoImage(ico)
@@ -41,6 +41,8 @@ class MainWindow(tkinter.Frame):
         parent.protocol('WM_DELETE_WINDOW', self.closeFunct)    # function that calls when main window is being closed
 
         self.checkConnectionsVar = False
+        with open("manual.txt","r") as f:
+            self.manualText = f.read()
 
         thread = threading.Thread(target=self.checkConnections)
         thread.start()
@@ -132,8 +134,17 @@ class MainWindow(tkinter.Frame):
             threads.append(threading.Thread(target=i.initializeCube))  # may take some time
             threads[-1].start()
 
-        for i in threads:
-            i.join()
+        running = True
+
+        while running:
+            running = False
+
+            for i in threads:
+                if i.is_alive():
+                    running = True
+
+            self.parent.update()
+
 
         self.checkConnectionsVar = True
         self.mainWindowOpen()   # function to create all the main window elements
@@ -154,7 +165,7 @@ class MainWindow(tkinter.Frame):
         self.listCubes = ScrollableLayerListSettings(self.parent, self)     # creates UI element that lists all the connected cubes and allows user to change their names
         self.listCubes.place(x=20,y=20,height=530,width=860) # places the list
         self.closeButton = Button(self.parent, text="Close",command=self.exitSettings)  # button that starts initialization
-        self.closeButton.place(x=400,y=570,width=100,height=20)
+        self.closeButton.place(x=400,y=565,width=100,height=30)
 
     def exitSettings(self):
         self.listCubes.destroy()
@@ -189,7 +200,7 @@ class MainWindow(tkinter.Frame):
 
     def createButton(self):     # rewrite later, temporary
         self.mwButtons = []
-        self.mwButtons.append(tkinter.Button(self.parent, text="MOVE", command=self.move))
+        self.mwButtons.append(tkinter.Button(self.parent, text="MANUAL", command=self.openManual))
         self.mwButtons[-1].place(x=20,y=100,width=100)
         self.mwButtons.append(tkinter.Button(self.parent, text="SETTINGS", command=self.settingsButtonOnClick))
         self.mwButtons[-1].place(x=120,y=100,width=100)
@@ -199,6 +210,9 @@ class MainWindow(tkinter.Frame):
         self.mwButtons[-1].place(x=320,y=100,width=100)
         self.mwButtons.append(tkinter.Button(self.parent, text="QUIT", command=self.closeFunct))
         self.mwButtons[-1].place(x=420,y=100,width=100)
+        self.img = ImageTk.PhotoImage(Image.open("thorlabsLogo.png").resize((384, 60)))
+        self.mwButtons.append(tkinter.Label(self.parent, image=self.img))
+        self.mwButtons[-1].place(x=20,y=20)
 
 
 
@@ -217,12 +231,33 @@ class MainWindow(tkinter.Frame):
     def measure(self):
         self.mv = Measure(self.parent, self)
 
+    def checkPopup(self, parent, angle):
+        popup = PopupWindow(parent,"Check if current possition is 0\nIf not, calibrate again.")
+
+    def openManual(self):
+        self.destroyButtons()
+
+        self.manual = scrollableManual(self.parent, self, self.manualText)
+        self.closeButtonManual = tkinter.Button(self.parent,text="Close",command=self.closeManual)
+
+        self.manual.place(x=20, y= 100, width=860, height=400)
+        self.closeButtonManual.place(x=400, y=560, height=30,width=100)
+        self.manualHeader = tkinter.Label(text=(open("manual.txt",'r').read().split("\n")[0]), font=tkinter.font.Font( family="Arial", size=20))
+        self.manualHeader.place(x=350,y=20,width=200,height=80)
+
+    def closeManual(self):
+        self.closeButtonManual.destroy()
+        self.manual.destroy()
+        self.manualHeader.destroy()
+        self.mainWindowOpen()
+
 
 class CalibrationWindow(tkinter.Toplevel):  # window class that handles the calibration process
     def __init__(self, parent, mainWindow):
         super().__init__(parent)
         self.mw = mainWindow        # main window reference
         self.title("Calibration")   # title
+        self.geometry("750x400")
 
         self.protocol("WM_DELETE_WINDOW", self.closed)
 
@@ -260,8 +295,9 @@ class PopupWindow(tkinter.Toplevel):
 class Measure(tkinter.Toplevel):
     def __init__(self, parent, mainWindow):
         super().__init__(parent)
+        self.running = False
         self.mw = mainWindow        # main window reference
-        self.title("Calibration")   # title
+        self.title("Measure")   # title
 
         self.transient(parent)
         self.grab_set()
@@ -292,11 +328,13 @@ class Measure(tkinter.Toplevel):
         manager1 = SharedOptionManager(options[0])
         manager2 = SharedOptionManager(options[1])
 
-        self.line_a = OptionLine(self, line_id="A", option_manager=manager1,previous_values=prev_values[0])
-        self.line_a.place(x=20,y=50, height=150,width=560)
+        self.states = [u"Pol", u"λ/2", u"λ/4 cw",u"λ/4 ccw"]
 
-        self.line_b = OptionLine(self, line_id="B", option_manager=manager2, previous_values=prev_values[1])
-        self.line_b.place(x=20,y=250, height=150,width=560)
+        self.line_a = OptionLine(self, line_id="A", option_manager=manager1,previous_values=prev_values[0],possibleStates=self.states,previous_states=prev_values[2],prev_enabled=prev_values[4])
+        self.line_a.place(x=20,y=50, height=100,width=560)
+
+        self.line_b = OptionLine(self, line_id="B", option_manager=manager2, previous_values=prev_values[1], possibleStates=self.states,previous_states=prev_values[3],prev_enabled=prev_values[5])
+        self.line_b.place(x=20,y=250, height=100,width=560)
 
 
         CUSTUM_FONT = tkinter.font.Font(family="Arial", size=14)
@@ -308,14 +346,125 @@ class Measure(tkinter.Toplevel):
         self.header1.place(x=20,y=15,height=30)
         self.header2.place(x=20,y=215,height=30)
 
+        self.rotationUI = [tkinter.Label(self, text="Rotation:", font=CUSTUM_FONT),
+                           tkinter.Label(self, text="Rotation:", font=CUSTUM_FONT),
+                           tkinter.Entry(self),
+                           tkinter.Entry(self),
+                           tkinter.Button(self,text="Run",command=self.run)
+                           ]
+
+        self.rotationUI[0].place(x=20,y=160,width=100)
+        self.rotationUI[1].place(x=20,y=360,width=100)
+        self.rotationUI[2].place(x=120,y=160,width=100)
+        self.rotationUI[3].place(x=120,y=360,width=100)
+        self.rotationUI[4].place(x=480,y=360,width=100)
+
+    def run(self):
+        values1 = self.line_a.get_dropdown2()
+        values2 = self.line_b.get_dropdown2()
+
+        inpts = [self.rotationUI[2].get(), self.rotationUI[3].get()]
+
+        try:
+            inpts[0] = int(inpts[0])
+        except:
+            inpts[0] = 0
+
+        try:
+            inpts[1] = int(inpts[1])
+        except:
+            inpts[1] = 0
+
+        precalculatedValues = [[inpts[0],0,0,0],
+                               [inpts[1],0,0,0]]
+
+        for i in range(0,3):
+            if (values1[i] == self.states[0]):
+                precalculatedValues[0][i+1] = precalculatedValues[0][0]
+            elif (values1[i] == self.states[1]):
+                precalculatedValues[0][i+1] = precalculatedValues[0][0] / 2
+            elif (values1[i] == self.states[2]):
+                precalculatedValues[0][i+1] = 90
+            elif (values1[i] == self.states[3]):
+                precalculatedValues[0][i+1] = 270
+
+            if (values2[i] == self.states[0]):
+                precalculatedValues[1][i+1] = precalculatedValues[1][0]
+            elif (values2[i] == self.states[1]):
+                precalculatedValues[1][i+1] = precalculatedValues[1][0] / 2
+            elif (values2[i] == self.states[2]):
+                precalculatedValues[1][i+1] = 90
+            elif (values2[i] == self.states[3]):
+                precalculatedValues[1][i+1] = 270
+
+        cubes = []  # Here I get references to the cubes as they are in the dropdowns
+        names = [self.line_a.get_selected_values(), self.line_b.get_selected_values()]  # Here I store all the names I have selected in the dropdowns
+
+        allCubesPairs = []
+
+        for i in range(6):
+            cubes.append(None)
+
+        for i in self.mw.cubes:
+            allCubesPairs.append(("<" + i.serialNumber + "> " + i.name, i))
+
+        for i in range(len(names[0])):
+            for g in range(len(allCubesPairs)):
+                if (names[0][i] == allCubesPairs[g][0]):
+                    cubes[i] = allCubesPairs[g]
+
+        for i in range(len(names[1])):
+            for g in range(len(allCubesPairs)):
+                if (names[1][i] == allCubesPairs[g][0]):
+                    cubes[i+3] = allCubesPairs[g]
+
+        print(cubes)
+
+        threads = []
+
+        for i in range(3):
+            if cubes[i] is not None:
+                threads.append(threading.Thread(
+                    target=lambda c=cubes[i][1], val=precalculatedValues[0][i + 1]: c.move_to_position(val)
+                ))
+                threads[-1].start()
+
+        for i in range(3):
+            if cubes[i + 3] is not None:
+                threads.append(threading.Thread(
+                    target=lambda c=cubes[i + 3][1], val=precalculatedValues[1][i + 1]: c.move_to_position(val)
+                ))
+                threads[-1].start()
+
+
+
+        self.running = True
+        self.rotationUI[4].config(state=DISABLED)
+
+        while self.running:
+            self.running = False
+
+            for i in threads:
+                if i.is_alive():
+                    self.running = True
+
+            self.parent.update()
+
+        self.running = False
+        self.rotationUI[4].config(state=ACTIVE)
+
 
     def closed(self):
+        if self.running:
+            return
+
         self.save_data()
         self.grab_release()
         self.destroy()
 
     def save_data(self):
-        save_list = [self.line_a.get_selected_values(), self.line_b.get_selected_values()]
+        save_list = [self.line_a.get_selected_values(), self.line_b.get_selected_values(),self.line_a.get_dropdown2(),self.line_b.get_dropdown2(),
+                     self.line_a.get_enabled(), self.line_b.get_enabled()]
 
         with open('selected_values.bin', 'wb') as f:
             pickle.dump(save_list, f)

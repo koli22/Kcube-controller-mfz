@@ -20,32 +20,44 @@ class LayerItemCal(tkinter.Frame):
 
         self.cube = myCube
 
-        text = self.cube.name
+        text = str(self.cube.name)
+        text2 = str(self.cube.serialNumber)
 
         # Text Label
-        tkinter.Label(self, text=text,font=CUSTUM_FONT).grid(row=0, column=0, sticky="w")
+        tkinter.Label(self, text=text,font=CUSTUM_FONT).grid(row=0, column=1, sticky="w", padx = 10)
+        tkinter.Label(self, text=text2,font=CUSTUM_FONT).grid(row=0, column=2, sticky="w", padx = 10)
+        self.offtext = tkinter.Label(self, text=("Current set offset: " + str(self.cube.give_offset())),font=CUSTUM_FONT)
+        self.offtext.grid(row=0, column=3, sticky="w", padx = 10)
 
         # Image (Placeholder for an image)
         img = Image.open(image_path).resize((50, 50))
         self.tk_image = ImageTk.PhotoImage(img)
-        tkinter.Label(self, image=self.tk_image,font=CUSTUM_FONT).grid(row=0, column=1, padx=10)
+        tkinter.Label(self, image=self.tk_image,font=CUSTUM_FONT).grid(row=0, column=0, padx=10)
 
         # Button
         self.button1 = tkinter.Button(self, text="Calibrate", command=self.button_action,font=CUSTUM_FONT)
-        self.button1.grid(row=0, column=2, padx=5)
+        self.button1.grid(row=0, column=4, padx=5)
 
     def button_action(self):
         CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)
         self.entry = tkinter.Entry(self,font=CUSTUM_FONT)
-        self.entry.grid(row=0, column=3)
+        self.entry.grid(row=0, column=5)
 
         self.button2 = tkinter.Button(self, text="Enter", command=self.button_action2,font=CUSTUM_FONT)
-        self.button2.grid(row=0, column=4, padx=5)
+        self.button2.grid(row=0, column=6, padx=5)
         self.button1.config(state=DISABLED)
 
     def button_action2(self):
         _input = self.entry.get()
         number = -1
+
+        if (_input == ""):
+            print("empty")
+            self.button1.config(state=ACTIVE)
+
+            self.button2.destroy()
+            self.entry.destroy()
+
 
         try:
             _input = int(_input)
@@ -54,13 +66,27 @@ class LayerItemCal(tkinter.Frame):
         except:
             pass
 
-        if (number > -1):
+        if (number >= 0):
             self.button1.config(state=ACTIVE)
 
             self.button2.destroy()
             self.entry.destroy()
 
             self.cube.setOffset(number)
+
+            thread = threading.Thread(target=self.cube.Home)
+            thread.start()
+            running = True
+
+            while running:
+                running = thread.is_alive()
+                self.cube.mainProgram.parent.update()
+
+            try:
+                CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)
+                self.offtext = tkinter.Label(self, text=("Current set offset: " + str(self.cube.give_offset())), font=CUSTUM_FONT)
+                self.cube.mainProgram.checkPopup(self,self.cube.offset)
+            except: pass
 
 
 class ScrollableLayerListCal(tkinter.Frame):
@@ -155,7 +181,6 @@ class LayerItemInit(tkinter.Frame):
 
     def changeName(self,value):
         self.promena.set(value)
-        self.cube.changeName(value)
         CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)
 
         if (value == "new name"):
@@ -166,7 +191,8 @@ class LayerItemInit(tkinter.Frame):
             self.inputButton.grid(row=0,column=5,padx=5)
 
             self.optionBar.config(state=DISABLED)
-
+        else:
+            self.cube.changeName(value)
 
     def enterButton(self):
         value = self.inputField.get()
@@ -181,6 +207,12 @@ class LayerItemInit(tkinter.Frame):
             self.inputField.destroy()
 
             self.cube.mainProgram.namePairs[self.cube.serialNumber] = [value, self.cube.myType]
+
+        if value == "":
+            self.promena.set(self.cube.oldName)
+            self.optionBar.config(state=ACTIVE)
+            self.inputButton.destroy()
+            self.inputField.destroy()
 
 
 class ScrollableLayerListSettings(tkinter.Frame):
@@ -254,7 +286,6 @@ class LayerItemSetting(tkinter.Frame):
     def changeName(self,value):
         CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)
         self.promena.set(value)
-        self.cube.changeName(value)
 
         if (value == "new name"):
             self.inputField = tkinter.Entry(self,font=CUSTUM_FONT)
@@ -264,7 +295,8 @@ class LayerItemSetting(tkinter.Frame):
             self.inputButton.grid(row=0,column=6,padx=5)
 
             self.optionBar.config(state=DISABLED)
-
+        else:
+            self.cube.changeName(value)
 
     def enterButton(self):
         value = self.inputField.get()
@@ -279,6 +311,12 @@ class LayerItemSetting(tkinter.Frame):
             self.inputField.destroy()
 
             self.cube.mainProgram.namePairs[self.cube.serialNumber] = [value, self.cube.myType]
+
+        if value == "":
+            self.promena.set(self.cube.oldName)
+            self.optionBar.config(state=ACTIVE)
+            self.inputButton.destroy()
+            self.inputField.destroy()
 
     def pumpOrProbe(self, value):
         self.promena2 = str(value)
@@ -353,11 +391,14 @@ class SharedOptionManager:
 
 
 class OptionLine(tkinter.Frame):
-    def __init__(self, parent, line_id, option_manager: SharedOptionManager, previous_values=None, *args, **kwargs):
+    def __init__(self, parent, line_id, option_manager: SharedOptionManager, possibleStates : list, previous_values=None,previous_states = None, prev_enabled = [True,True,True], *args, **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.line_id = line_id
         self.manager = option_manager
         self.manager.register(self)
+
+        self.possibleStates = possibleStates
+        self.selectedStates = [0,0,0]
 
         self.canvas = tkinter.Canvas(self, height=100)
         self.canvas.pack(fill="both", expand=True)
@@ -367,14 +408,21 @@ class OptionLine(tkinter.Frame):
 
         self.options = []
         self.restored_values = previous_values or []
+        self.restored_states = previous_states or []
+        self.prev_enabled = prev_enabled
+
+        for i in range(len(self.restored_states),3):
+            self.restored_states.append(None)
+
         self._restore_options()
 
     def _restore_options(self):
+        i = 0
         for val in self.restored_values:
             available = self.manager.get_available()
             if val != NONE_OPTION and val not in available:
                 break
-            self.add_option(preselected=val)
+            self.add_option(preselected=val,prestate=self.restored_states[i],enabled=self.prev_enabled[i])
 
             # Find the index of the newly added option
             index = len(self.options) - 1
@@ -383,9 +431,12 @@ class OptionLine(tkinter.Frame):
             if val != NONE_OPTION:
                 self.manager.select(self.line_id, index, val)
 
-        self.add_option()  # always append one empty dropdown
+            i+=1
 
-    def add_option(self, preselected=NONE_OPTION):
+        for i in range(3):
+            self.add_option()
+
+    def add_option(self, preselected=NONE_OPTION,prestate=None,enabled=True):
         if (len(self.options) >= 3):
             return
 
@@ -409,13 +460,58 @@ class OptionLine(tkinter.Frame):
         dropdown.pack(pady = 5)
         dropdown.bind("<<ComboboxSelected>>", lambda e, idx=index: self.on_select(idx))
 
+        var2 = tkinter.StringVar()
+        var2.set(value=self.possibleStates[0])
+        self.selectedStates[len(self.options)] = self.possibleStates[0]
+
+        if prestate != None and self.possibleStates.count(prestate) > 0:
+            var2.set(value=prestate)
+            self.selectedStates[len(self.options)] = prestate
+
+        dropdown2 = ttk.Combobox(
+            container,
+            textvariable=var2,
+            values=self.possibleStates,
+            state="readonly"
+        )
+
+        dropdown2.pack(pady = 5)
+        dropdown2.bind("<<ComboboxSelected>>", lambda e, idx=index: self.on_select2(idx))
+
         self.options.append({
             "frame": container,
             "button": toggle_button,
             "combobox": dropdown,
+            "states": dropdown2,
             "var": var,
+            "var2": var2,
             "enabled": True
         })
+
+        if not enabled:
+            self.toggle(index)
+
+    def on_select2(self, index):
+        value = self.options[index]["var2"].get()
+
+        self.selectedStates[index] = value
+
+    def get_dropdown2(self):
+        return self.selectedStates
+
+    def get_enabled(self):
+        ret_line = []
+
+        for i in range(len(self.options)):
+            if self.options[i]["enabled"]:
+                ret_line.append(True)
+            else:
+                ret_line.append(False)
+
+        for i in range(len(ret_line), 3):
+            ret_line.append(True)
+
+        return ret_line
 
 
     def toggle(self, index):
@@ -430,8 +526,11 @@ class OptionLine(tkinter.Frame):
         value = self.options[index]["var"].get()
         self.manager.select(self.line_id, index, value)
 
+        """
         if index == len(self.options) - 1 and value != NONE_OPTION:
             self.add_option()
+            
+        
 
         # Check if last two are NONE_OPTION → remove last
         if len(self.options) >= 2:
@@ -439,6 +538,8 @@ class OptionLine(tkinter.Frame):
             second_last_val = self.options[-2]["var"].get()
             if last_val == NONE_OPTION and second_last_val == NONE_OPTION:
                 self._remove_last_option()
+                
+                """
 
     def _remove_last_option(self):
         last = self.options.pop()
@@ -519,8 +620,72 @@ class LayerItemMainWindow(tkinter.Frame):
     def findDevice(self):
         thread = threading.Thread(target=self.cube.findDevice)
         thread.start()
+        thread.join()
 
     def homeDevice(self):
         thread = threading.Thread(target=self.cube.Home()) # for some reason this thread doesnt work and acts like main program
         thread.start()
+        thread.join()
 
+class LayerItemText(tkinter.Frame):
+    def __init__(self, parent, myText):
+        super().__init__(parent, pady=10, padx=10, bd=0, relief="flat", highlightthickness=0)
+
+        CUSTOM_FONT = tkinter.font.Font(family="Arial", size=10)
+        self.text = tkinter.Label(self, text=self.cutText(myText), font=CUSTOM_FONT,
+                             justify="left", anchor="w", wraplength=800)
+        self.text.grid(row=0, column=0, sticky="w", padx=10)
+
+    def cutText(self, _text):
+        return _text
+        #return self.insert_newlines(_text)
+
+    def insert_newlines(self, _text, every=120):
+        return '\n'.join(_text[i:i + every] for i in range(0, len(_text), every))
+
+class scrollableManual(tkinter.Frame):
+    def __init__(self, parent, mw, manualText):
+        super().__init__(parent)
+
+        self.canvas = tkinter.Canvas(self, width=860, height=430, highlightthickness=0, bd=0)
+        scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+
+        self.scrollable_frame = tkinter.Frame(self.canvas, bd=0, highlightthickness=0)
+        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.scrollable_frame.bind("<Configure>", lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+
+        # Bind mousewheel (keep track so we can unbind later)
+        self.bind_mousewheel()
+
+        for region in manualText.split("\n")[1:]:
+            layer = LayerItemText(self.scrollable_frame, region)
+            layer.pack(fill="x", pady=5)
+
+    def bind_mousewheel(self):
+        self.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.bind_all("<Button-4>", self._on_mousewheel_linux_up)
+        self.bind_all("<Button-5>", self._on_mousewheel_linux_down)
+
+    def unbind_mousewheel(self):
+        self.unbind_all("<MouseWheel>")
+        self.unbind_all("<Button-4>")
+        self.unbind_all("<Button-5>")
+
+    def _on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    def _on_mousewheel_linux_up(self, event):
+        self.canvas.yview_scroll(-1, "units")
+
+    def _on_mousewheel_linux_down(self, event):
+        self.canvas.yview_scroll(1, "units")
+
+    def destroy(self):
+        # Unbind before destroying to prevent errors
+        self.unbind_mousewheel()
+        super().destroy()
