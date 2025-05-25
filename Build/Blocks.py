@@ -1,9 +1,10 @@
+# importing libraries
+
 import threading
 import tkinter
 from tkinter import ttk, StringVar, OptionMenu
 from tkinter.constants import DISABLED
 from tkinter.constants import ACTIVE
-from tkinter.scrolledtext import ScrolledText
 from PIL import Image, ImageTk
 import tkinter.font
 
@@ -13,77 +14,74 @@ Stores more complex UI elements
 used in App.py
 """
 
-class LayerItemCal(tkinter.Frame):
-    def __init__(self, parent, image_path, myCube):
+class LayerItemCal(tkinter.Frame):                                      # calibration layer. Stores all the UI elements
+    def __init__(self, parent, image_path, myCube):                     # manages scrolling etc.
         super().__init__(parent, pady=10, padx=10, bd=1, relief="solid")
-        CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)
+        CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)        # defining custom font
 
-        self.cube = myCube
+        self.cube = myCube                                              # store cube object assigned to this layer
 
-        text = str(self.cube.name)
+        text = str(self.cube.name)                                      # text for the labels
         text2 = str(self.cube.serialNumber)
 
-        # Text Label
-        tkinter.Label(self, text=text,font=CUSTUM_FONT).grid(row=0, column=1, sticky="w", padx = 10)
-        tkinter.Label(self, text=text2,font=CUSTUM_FONT).grid(row=0, column=2, sticky="w", padx = 10)
-        self.offtext = tkinter.Label(self, text=("Current set offset: " + str(self.cube.give_offset())),font=CUSTUM_FONT)
-        self.offtext.grid(row=0, column=3, sticky="w", padx = 10)
+        tkinter.Label(self, text=text,font=CUSTUM_FONT).grid(row=0, column=1, sticky="w", padx = 10)    # text
+        tkinter.Label(self, text=text2,font=CUSTUM_FONT).grid(row=0, column=2, sticky="w", padx = 10)   # text
+        self.offtext = tkinter.Label(self, text=("Current set offset: " + str(self.cube.give_offset())),font=CUSTUM_FONT)   # offset text. Can be updated
+        self.offtext.grid(row=0, column=3, sticky="w", padx = 10)                                       # placing text on grid
 
-        # Image (Placeholder for an image)
-        img = Image.open(image_path).resize((50, 50))
-        self.tk_image = ImageTk.PhotoImage(img)
-        tkinter.Label(self, image=self.tk_image,font=CUSTUM_FONT).grid(row=0, column=0, padx=10)
+        img = Image.open(image_path).resize((50, 50))                   # creating image
+        self.tk_image = ImageTk.PhotoImage(img)                         # tkinter image object
+        tkinter.Label(self, image=self.tk_image,font=CUSTUM_FONT).grid(row=0, column=0, padx=10)    # placing image on grid
 
-        # Button
-        self.button1 = tkinter.Button(self, text="Calibrate", command=self.button_action,font=CUSTUM_FONT)
-        self.button1.grid(row=0, column=4, padx=5)
+        self.button1 = tkinter.Button(self, text="Calibrate", command=self.button_action,font=CUSTUM_FONT)  # creaing button for starting the calibration
+        self.button1.grid(row=0, column=4, padx=5)                      # placing on grid
 
-    def button_action(self):
-        CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)
-        self.entry = tkinter.Entry(self,font=CUSTUM_FONT)
+    def button_action(self):                                            # button action for starting the calibration
+        CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)        # font
+        self.entry = tkinter.Entry(self,font=CUSTUM_FONT)               # entry for getting the number input
         self.entry.grid(row=0, column=5)
 
-        self.button2 = tkinter.Button(self, text="Enter", command=self.button_action2,font=CUSTUM_FONT)
+        self.button2 = tkinter.Button(self, text="Enter", command=self.button_action2,font=CUSTUM_FONT)     # button for confirming the caibration
         self.button2.grid(row=0, column=6, padx=5)
-        self.button1.config(state=DISABLED)
+        self.button1.config(state=DISABLED)         # disable the first button
 
-    def button_action2(self):
-        _input = self.entry.get()
+    def button_action2(self):           # confrim calibration
+        _input = self.entry.get()       # input
         number = -1
 
-        if (_input == ""):
+        if (_input == ""):              # check if empty
             print("empty")
             self.button1.config(state=ACTIVE)
 
             self.button2.destroy()
-            self.entry.destroy()
+            self.entry.destroy()        # destroy UI elements
 
 
         try:
-            _input = int(_input)
+            _input = int(_input)        # check if number
             if (_input >= 0 and _input < 360):
                 number = _input
         except:
             pass
 
-        if (number >= 0):
-            self.button1.config(state=ACTIVE)
+        if (number >= 0):               # if number > 0
+            self.button1.config(state=ACTIVE)   # activate old button
 
             self.button2.destroy()
             self.entry.destroy()
 
-            self.cube.setOffset(number)
+            self.cube.setOffset(number)     # set offset
 
-            thread = threading.Thread(target=self.cube.Home)
-            thread.start()
+            thread = threading.Thread(target=self.cube.Home)    # creating thread for controlling the motor
+            thread.start()      # starting thread
             running = True
 
             while running:
                 running = thread.is_alive()
-                self.cube.mainProgram.parent.update()
+                self.cube.mainProgram.parent.update()       # updating tkinter window
 
             try:
-                CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)
+                CUSTUM_FONT = tkinter.font.Font(family="Arial", size=10)    # custum font
                 self.offtext = tkinter.Label(self, text=("Current set offset: " + str(self.cube.give_offset())), font=CUSTUM_FONT)
                 self.cube.mainProgram.checkPopup(self,self.cube.offset)
             except: pass

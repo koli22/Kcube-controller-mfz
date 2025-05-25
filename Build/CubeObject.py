@@ -35,12 +35,12 @@ class Cube:
         self.controller = None  # Will hold the device controller object
         self.invrted = False  # Flag to indicate if motor direction is inverted
         self.oldName = ""  # Stores the name attached to this serial number last time
-        self.allNames = []
-        self.mainProgram = program
-        self.myType = 0
-        self.dc = DeviceConfiguration.DeviceSettingsUseOptionType.UseDeviceSettings
+        self.allNames = [] # List of all names stored last time
+        self.mainProgram = program  # reference to root program
+        self.myType = 0             # probe/pump
+        self.dc = DeviceConfiguration.DeviceSettingsUseOptionType.UseDeviceSettings     # configuration
 
-    def addName(self, name):
+    def addName(self, name):                    # add name to the list of all names
         if (self.allNames.count(name) == 0):
             self.allNames.append(str(name))
 
@@ -75,7 +75,7 @@ class Cube:
         self.controller.Home(60000)
         self.detectIfInverted()
 
-    def changeName(self, newName):
+    def changeName(self, newName):      # change devices name
         if (self.name != newName):
             self.name = newName
 
@@ -163,6 +163,7 @@ class Cube:
         """
 
 
+        # convert values to C# System.Decimal
         target_position = (Decimal(target_position) + self.offset) % Decimal(max_angle)
         tolerance = Decimal(tolerance)
         max_angle = Decimal(max_angle)

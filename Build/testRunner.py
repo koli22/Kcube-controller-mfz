@@ -1,9 +1,8 @@
 import tkinter
 from App import MainWindow
 
-# Main code. Creates main window object and runs mainloop.
+# main program
 
-
-root = tkinter.Tk()
-app = MainWindow(root)
-app.mainloop()
+root = tkinter.Tk()     # creating root. controls the whole tkinter structure
+app = MainWindow(root)  # main window object
+app.mainloop()          # running mainloop. Updates tkinter
