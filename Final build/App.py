@@ -45,7 +45,7 @@ class MainWindow(tkinter.Frame):
         self.checkConnectionsVar = False
 
         # Load manual content from file
-        with open("manual.txt", "r") as f:
+        with open("manual.txt", "r",encoding="utf-8") as f:
             self.manualText = f.read()
 
         # Start background thread for connection checks
@@ -333,7 +333,7 @@ class MainWindow(tkinter.Frame):
 
         self.manual.place(x=20, y= 100, width=860, height=400)
         self.closeButtonManual.place(x=400, y=560, height=30,width=100)
-        self.manualHeader = tkinter.Label(text=(open("manual.txt",'r').read().split("\n")[0]), font=tkinter.font.Font( family="Arial", size=20))
+        self.manualHeader = tkinter.Label(text=(open("manual.txt",'r',encoding="utf-8").read().split("\n")[0]), font=tkinter.font.Font( family="Arial", size=20))
         self.manualHeader.place(x=350,y=20,width=200,height=80)
 
     def closeManual(self):
