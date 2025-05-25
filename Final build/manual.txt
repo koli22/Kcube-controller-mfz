@@ -1,0 +1,97 @@
+USER MANUAL – Thorlabs Sisenik Controller
+=========================================
+
+1. GETTING STARTED
+------------------
+
+- Before using this application, connect each K-Cube to the computer **and open the official Thorlabs Kinesis app** once to allow the system to recognize the device and assign its type. Then close the Thorlabs app and continue with this application.
+- Connect all K-Cubes to your computer via USB.
+- Launch the application.
+- If devices do not appear automatically, press the "Refresh" button.
+
+⚠️ **Important:** Do not disconnect any cubes while the application is running.  
+If a cube is unplugged during use, **you must close the application, reconnect the cube, and restart the app** to ensure proper initialization.
+
+The app will scan for connected devices and list them in a scrollable window.
+
+2. INITIAL SETUP
+----------------
+
+**Assigning Names to Cubes**
+- Assign a custom name to each cube (e.g., “Pump λ/2”).
+- Use the scrollable list to select or add a new name.
+
+**Initializing Devices**
+- Once all cubes are named, press the "INIT" button.
+- Initialization will run in the background (multi-threaded).
+- After initialization, the main control window opens.
+
+3. MAIN WINDOW FUNCTIONS
+------------------------
+
+- MANUAL: Open this user manual.
+- SETTINGS: Reopen the device naming window.
+- CALIBRATE: Open calibration window to align optical components.
+- MEASURE: Open the measurement setup window.
+- QUIT: Save settings and safely close the application.
+
+4. CALIBRATION WINDOW
+---------------------
+
+- Use this window to align and reset positions of all cubes.
+- Adjust each cube manually as needed.
+- Only one calibration window can be opened at a time.
+
+5. MEASUREMENT WINDOW
+---------------------
+
+**Configuration Options**
+- Two lines are available: PUMP and PROBE.
+- For each line, you can:
+  - Select up to 3 optical components.
+  - Choose type/state: Pol, λ/2, λ/4 cw, λ/4 ccw.
+
+**Setting Angles**
+- Enter a base rotation angle (in degrees) for each line.
+- The application will calculate angles based on element type.
+
+**Running a Measurement**
+- Set desired components and base angles for both lines.
+- Press "Run" to rotate all selected cubes.
+- The interface will remain responsive while motors are moving.
+
+6. SAVING & LOADING CONFIGURATIONS
+-----------------------------------
+
+- Device names are saved in "ConnectedDevices.pkl".
+- Measurement presets are saved in "selected_values.bin".
+- These are loaded automatically on startup.
+
+7. EXITING THE APPLICATION
+--------------------------
+
+- Press the "QUIT" button.
+- This will:
+  - Stop all threads
+  - Save current configurations
+  - Disconnect all devices
+  - Close the application
+
+8. TROUBLESHOOTING
+------------------
+
+Problem: Device not detected  
+Solution: Check USB and press "Refresh". Make sure the device was initialized at least once via the Thorlabs Kinesis app.
+
+Problem: Cube not initializing  
+Solution: Ensure it’s powered and correctly connected. Restart the app if needed.
+
+Problem: UI freezes  
+Solution: Wait for motor actions to complete
+
+Problem: Wrong angles during measurement  
+Solution: Recalibrate and re-enter values
+
+Problem: Cube unplugged during operation  
+Solution: Close the application, reconnect the cube, and restart the app to reinitialize all devices.
+
